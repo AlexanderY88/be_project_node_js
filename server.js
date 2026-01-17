@@ -6,7 +6,7 @@ const mongoose = require("mongoose");
 
 // Routes
 const users = require("./routes/users");
-
+const cards = require("./routes/cards");
 const cors = require("cors");
 
 
@@ -18,7 +18,7 @@ app.use(express.json());
 
 // Routes
 app.use("/api/users", users);
-
+app.use("/api/cards", cards);
 
 // Connect to MongoDB
 const mongoUri = process.env.DB || "mongodb://localhost:27017/business_cards";
