@@ -39,15 +39,15 @@ router.post("/", auth, async (req,res) => {
         const {error} = checkCardBody.validate(req.body);
         if (error) return res.status(400).json({ message: error.details[0].message });
         // 2. check if authenticated user exists and is business user
-        const user = await User.findById(req.user.id); 
+        const user = await User.findById(req.user._id); // Changed from req.user.id to req.user._id
         if (!user) return res.status(404).json({ message: "User not found" });
         // 3. check if user is biz
-        if (!user.isBiz) return res.status(403).json({ message: "Only business users can create cards" });
+        if (!user.isBusiness) return res.status(403).json({ message: "Only business users can create cards" });
         // 4. check if bizNumber is unique
         const existingCard = await Card.findOne({ bizNumber: req.body.bizNumber });
         if (existingCard) return res.status(400).json({ message: "Business number already exists" });
         // 5. create new card with authenticated user's ID
-        const cardData = { ...req.body, user_id: req.user.id }; 
+        const cardData = { ...req.body, user_id: req.user._id }; 
         const newCard = new Card(cardData);
         await newCard.save();
         res.status(201).json(newCard);
@@ -69,7 +69,7 @@ router.get("/", async (req,res) => {
             const likesCount = card.likes.length;
             
             // Check if there's an authenticated user and if they liked this card
-            const isLikedByCurrentUser = req.user ? card.likes.includes(req.user.id) : false;
+            const isLikedByCurrentUser = req.user ? card.likes.includes(req.user._id) : false;
             
             // Remove the likes array and add computed fields
             const { likes, ...cardWithoutLikes } = cardObj;
@@ -82,6 +82,17 @@ router.get("/", async (req,res) => {
         });
         
         res.status(200).json(transformedCards);
+    } catch (error) {
+        res.status(500).send("Internal server error");
+    }
+});
+
+// get all my cards
+router.get("/my-cards", auth, async (req,res) => {
+    try {
+        const cards = await Card.find({user_id: req.user._id.toString()});
+        if (cards.length === 0) return res.status(404).send("You have no cards");
+        res.status(200).json(cards);
     } catch (error) {
         res.status(500).send("Internal server error");
     }
@@ -110,8 +121,8 @@ router.put("/:id", auth, async (req,res) => {
         const card = await Card.findById(req.params.id);
         if (!card) return res.status(404).send(`No card with id ${req.params.id} found`);
         // 3. check if the user is card owner or admin
-        const user = await User.findById(req.user.id); 
-        const cardOwner = card.user_id.toString() === req.user.id;
+        const user = await User.findById(req.user._id); 
+        const cardOwner = card.user_id.toString() === req.user._id;
         const isAdmin = user.isAdmin; 
         if (!cardOwner && !isAdmin) {
             return res.status(403).send("Access denied: You can only update your own cards or must be admin");
@@ -131,8 +142,8 @@ router.delete("/:id", auth, async (req,res) => {
         const card = await Card.findById(req.params.id);
         if (!card) return res.status(404).send(`No card with id ${req.params.id} found`);
         // 2. check if the user is card owner or admin
-        const user = await User.findById(req.user.id); 
-        const cardOwner = card.user_id.toString() === req.user.id;
+        const user = await User.findById(req.user._id); 
+        const cardOwner = card.user_id.toString() === req.user._id;
         const isAdmin = user.isAdmin; 
         if (!cardOwner && !isAdmin) {
             return res.status(403).send("Access denied: You can only delete your own cards or must be admin");
@@ -145,24 +156,10 @@ router.delete("/:id", auth, async (req,res) => {
     }
 });
 
-// get all my cards
-router.get("/my-cards", auth, async (req,res) => {
-    try {
-        // find cards id by user id
-        const cards = await Card.find({user_id: req.user.id});
-        if (cards.length === 0) return res.status(404).send("You have no cards");
-        // 2. return the cards
-        res.status(200).json(cards);
-
-    } catch (error) {
-        res.status(500).send("Internal server error");
-    }
-});
-
 // like / unlike the card by id 
 router.patch("/like/:id", auth, async (req,res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user._id;
         // Check if card exists and if user already liked it
         const card = await Card.findById(req.params.id);
         if (!card) return res.status(404).send(`No card with id ${req.params.id} found`);

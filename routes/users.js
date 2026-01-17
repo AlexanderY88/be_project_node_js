@@ -87,7 +87,7 @@ router.post("/login", async (req,res) => {
 // get current user details route
 router.get("/", auth, async (req,res) => {
     try {
-        const user = await User.findById(req.payload._id);
+        const user = await User.findById(req.user._id);
         if (!user) return res.status(404).send("User not found");
         res.status(200).json(_.omit(user.toObject(), ['password', '__v', '_id']));
     } catch (err) {
@@ -103,11 +103,34 @@ router.put("/update", auth, async (req,res) => {
         const {error} = checkRegisterBody.validate(req.body);
         if (error) return res.status(400).send(error.details[0].message);
         // 2. check if user exist by id
-        let user = await User.findOne({_id: req.payload._id});
+        let user = await User.findOne({_id: req.user._id});
         if (!user) return res.status(404).send("User not found");
         // 3. update user details
-        await User.updateOne({_id: req.payload._id}, req.body);
+        await User.updateOne({_id: req.user._id}, req.body);
         res.status(200).json(_.omit(user.toObject(), ['password', '__v', '_id']));
+    } catch (err) {
+        res.status(500).send("Internal server error")
+    }
+});
+
+// get all users route
+router.get("/all", auth, async (req,res) => {
+    try {
+        const users = await User.find();
+        if (users.length == 0) return res.status(404).send("No users found");
+        const usersWithoutSensitiveInfo = users.map(user => _.omit(user.toObject(), ['password', '__v']));
+        res.status(200).json(usersWithoutSensitiveInfo);
+    } catch (error) {
+        res.status(500).send("Internal server error")
+    }
+});
+
+// get current user details
+router.get("/currentUser", auth, async (req,res) => {
+    try {
+        const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).send("User not found");
+        res.status(200).json(_.omit(user.toObject(), ['password', '__v']));
     } catch (err) {
         res.status(500).send("Internal server error")
     }
@@ -131,29 +154,6 @@ router.delete("/:id", auth, async (req,res) => {
 router.get("/profile/:id", auth, async (req,res) => {
     try {
         const user = await User.findById(req.params.id);
-        if (!user) return res.status(404).send("User not found");
-        res.status(200).json(_.omit(user.toObject(), ['password', '__v']));
-    } catch (err) {
-        res.status(500).send("Internal server error")
-    }
-});
-
-// get all users route
-router.get("/all", auth, async (req,res) => {
-    try {
-        const users = await User.find();
-        if (users.length == 0) return res.status(404).send("No users found");
-        const usersWithoutSensitiveInfo = users.map(user => _.omit(user.toObject(), ['password', '__v']));
-        res.status(200).json(usersWithoutSensitiveInfo);
-    } catch (error) {
-        res.status(500).send("Internal server error")
-    }
-});
-
-// get current user details
-router.get("/currentUser", auth, async (req,res) => {
-    try {
-        const user = await User.findById(req.payload._id);
         if (!user) return res.status(404).send("User not found");
         res.status(200).json(_.omit(user.toObject(), ['password', '__v']));
     } catch (err) {
