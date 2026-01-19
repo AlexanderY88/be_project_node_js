@@ -377,7 +377,7 @@ auth-token: YOUR_JWT_TOKEN
 - `400` - Bad Request (validation error)
 - `401` - Unauthorized (missing/invalid token)
 - `403` - Forbidden (insufficient permissions)
-- `404` - Not Found
+- `404` - Not Found or No Data Returned (for example no cards found)
 - `500` - Internal Server Error
 
 ### Error Response Format:
