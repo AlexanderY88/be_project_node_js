@@ -121,13 +121,13 @@ router.put("/:id", auth, async (req,res) => {
         const card = await Card.findById(req.params.id);
         if (!card) return res.status(404).send(`No card with id ${req.params.id} found`);
         // 3. check if the user is card owner or admin
-        const user = await User.findById(req.user._id); 
         const cardOwner = card.user_id.toString() === req.user._id;
-        const isAdmin = user.isAdmin; 
+        const isAdmin = req.user.isAdmin; // Use JWT token data instead of database lookup
+        // if the user is not owner and not admin - 403 error
         if (!cardOwner && !isAdmin) {
             return res.status(403).send("Access denied: You can only update your own cards or must be admin");
         }
-        // 4. Update the card
+        // 4. Update the card and return updated card
         const updatedCard = await Card.findByIdAndUpdate(req.params.id, req.body, {new: true});
         res.status(200).send(updatedCard);
     } catch (error) {
@@ -142,9 +142,8 @@ router.delete("/:id", auth, async (req,res) => {
         const card = await Card.findById(req.params.id);
         if (!card) return res.status(404).send(`No card with id ${req.params.id} found`);
         // 2. check if the user is card owner or admin
-        const user = await User.findById(req.user._id); 
         const cardOwner = card.user_id.toString() === req.user._id;
-        const isAdmin = user.isAdmin; 
+        const isAdmin = req.user.isAdmin; // Use JWT token data instead of database lookup
         if (!cardOwner && !isAdmin) {
             return res.status(403).send("Access denied: You can only delete your own cards or must be admin");
         } 
@@ -163,10 +162,8 @@ router.patch("/like/:id", auth, async (req,res) => {
         // Check if card exists and if user already liked it
         const card = await Card.findById(req.params.id);
         if (!card) return res.status(404).send(`No card with id ${req.params.id} found`);
-        
         const isLiked = card.likes.includes(userId);
-        
-        // Use atomic MongoDB operations
+        // add the user id to likes array if not liked yet or remove it if user unlike the card
         const updatedCard = await Card.findByIdAndUpdate(
             req.params.id,
             isLiked 
@@ -174,7 +171,6 @@ router.patch("/like/:id", auth, async (req,res) => {
                 : { $addToSet: { likes: userId } }, // Add to array (no duplicates)
             { new: true }
         );
-        
         res.status(200).json(updatedCard);
     } catch (error) {
         res.status(500).send("Internal server error");
@@ -185,10 +181,23 @@ router.patch("/like/:id", auth, async (req,res) => {
 router.patch("/bizNumber/:id", auth, async (req,res) => {
     try {
         const newBizNumber = req.body.bizNumber;
-        // 1. check if the new bizNumber already exists
-        const existingCard = await Card.findOne({ bizNumber: newBizNumber });
+        // 1. Check if card exists
+        const card = await Card.findById(req.params.id);
+        if (!card) return res.status(404).send(`No card with id ${req.params.id} found`);
+        // 2. check if the user is card owner or admin
+        const cardOwner = card.user_id.toString() === req.user._id;
+        const isAdmin = req.user.isAdmin;
+        // if the user is not owner and not admin - 403 error
+        if (!cardOwner && !isAdmin) {
+            return res.status(403).send("Access denied: You can only update your own cards or must be admin");
+        }
+        // 3. check if the new bizNumber already exists in OTHER cards
+        const existingCard = await Card.findOne({ 
+            bizNumber: newBizNumber, 
+            _id: { $ne: req.params.id } // Exclude current card from check
+        });
         if (existingCard) return res.status(400).send("Business number already exists");
-        // 2. update the card bizNumber
+        // 4. update the card bizNumber
         const updatedCard = await Card.findByIdAndUpdate(
             req.params.id,
             { bizNumber: newBizNumber },

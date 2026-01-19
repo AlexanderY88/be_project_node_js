@@ -72,7 +72,7 @@ const cardSchema = new mongoose.Schema({
         default: []
     }
 
-});
+}, { timestamps: true }); // add createdAt and updatedAt fields
 
 
 const Card = mongoose.model("cards", cardSchema);

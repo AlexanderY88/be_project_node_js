@@ -1,31 +1,90 @@
+// Import required packages
 const express = require("express");
 require("dotenv").config();
-const app = express();
-const port = process.env.PORT || 9000;
 const mongoose = require("mongoose");
+const cors = require("cors");
+const chalk = require("chalk"); // For colored console output
 
-// Routes
+// Import our route files
 const users = require("./routes/users");
 const cards = require("./routes/cards");
-const cors = require("cors");
 
+// Create Express app
+const app = express();
+const port = process.env.PORT || 8000;
 
-// cors middleware
-app.use(cors());
+// Basic middleware setup
+app.use(cors()); // Allow requests from other websites
+app.use(express.json()); // Parse JSON data from requests
+app.use(express.static('public')); // Serve files from public folder
 
-// Parse json bodies
-app.use(express.json());
+// Error logging middleware - catches all errors (401, 403, 404, 500, etc.)
+app.use((req, res, next) => {
+    // Store original res.json and res.send methods
+    const originalJson = res.json;
+    const originalSend = res.send;
+    
+    // Override res.json
+    res.json = function(data) {
+        logError(req, res);
+        return originalJson.call(this, data);
+    };
+    
+    // Override res.send  
+    res.send = function(data) {
+        logError(req, res);
+        return originalSend.call(this, data);
+    };
+    
+    next();
+});
 
-// Routes
-app.use("/api/users", users);
-app.use("/api/cards", cards);
+// Error logging function
+function logError(req, res) {
+    if (res.statusCode >= 400) {
+        let errorType = '';
+        let color = chalk.red;
+        
+        switch(res.statusCode) {
+            case 400: errorType = 'BAD REQUEST'; break;
+            case 401: errorType = 'UNAUTHORIZED'; color = chalk.yellow; break;
+            case 403: errorType = 'FORBIDDEN'; color = chalk.magenta; break;
+            case 404: errorType = 'NOT FOUND'; color = chalk.red; break;
+            case 500: errorType = 'SERVER ERROR'; color = chalk.red.bold; break;
+            default: errorType = 'ERROR'; break;
+        }
+        
+        console.log(color(`${errorType}: ${req.method} ${req.url} - Status: ${res.statusCode}`));
+    }
+}
+
+// API Routes
+app.use("/api/users", users); // All user routes
+app.use("/api/cards", cards); // All card routes
+
+// Simple 404 handler for routes that don't exist
+app.use((req, res) => {
+    res.status(404).json({
+        error: "Page not found",
+        message: `The route '${req.originalUrl}' does not exist`
+    });
+});
+
+// Database connection
+const mongoUri = process.env.LOCAL_DB || process.env.DB;
 
 // Connect to MongoDB
-const mongoUri = process.env.DB || "mongodb://localhost:27017/business_cards";
-
 mongoose.connect(mongoUri)
-  .then(() => console.log("Connected to MongoDB"))
-  .catch(err => console.error("MongoDB connection error:", err));
+  .then(() => {
+    console.log(chalk.green("Connected to MongoDB successfully!"));
+    console.log(chalk.cyan(`Database: ${mongoUri.includes('localhost') ? 'Local MongoDB' : 'MongoDB Atlas'}`));
+  })
+  .catch(err => {
+    console.error(chalk.red("MongoDB connection error:"), err);
+  });
 
-// Start server
-app.listen(port, () => console.log("Server started on port", port));
+// Start the server
+app.listen(port, () => {
+    console.log(chalk.blue(`Server running on port ${port}`));
+    console.log(chalk.yellow(`Open http://localhost:${port} in your browser`));
+});

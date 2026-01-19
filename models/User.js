@@ -22,7 +22,8 @@ const userSchema = new mongoose.Schema({
     },
     email: {
         type: String,
-        required: true
+        required: true,
+        unique: true
     },
     password: {
         type: String,
@@ -72,6 +73,8 @@ const userSchema = new mongoose.Schema({
         default: false
     }
 
+}, {
+    timestamps: true // add createdAt and updatedAt fields
 });
 
 
