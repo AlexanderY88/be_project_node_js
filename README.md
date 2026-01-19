@@ -51,8 +51,8 @@ A RESTful API for managing business cards and users with authentication, built w
 1. **Create a `.env` file in the root directory:**
    ```env
    # MongoDB Connection (Cloud first, then local fallback)
-   DB=mongodb+srv://username:password@cluster.mongodb.net/business_cards_db
-   LOCAL_DB=mongodb://localhost:27017/business_cards_db
+   DB=cloud_mongodb_connection_string_here
+   LOCAL_DB=local_mongodb_connection_string_here
    
    # Server Configuration
    PORT=8000
