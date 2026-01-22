@@ -34,35 +34,41 @@ A RESTful API for managing business cards and users with authentication, built w
 
 ### Package Overview:
 - **express**: Web framework for Node.js
-- **mongoose**: MongoDB object modeling tool
+- **mongoose**: MongoDB object modeling tool  
 - **cors**: Cross-Origin Resource Sharing middleware
 - **dotenv**: Environment variable loader
 - **joi**: Data validation library
 - **bcryptjs**: Password hashing library
 - **jsonwebtoken**: JWT token generation and verification
 - **lodash**: JavaScript utility library
-- **chalk**: Terminal styling library
+- **chalk**: Terminal styling library for colored console output
 - **morgan**: HTTP request logger middleware
 - **fs-extra**: Enhanced file system methods
-- **nodemon**: Development tool for auto-restarting server
+- **nodemon**: Development tool for auto-restarting server (dev dependency)
 
 ### Environment Configuration
 
 1. **Create a `.env` file in the root directory:**
    ```env
-   # MongoDB Connection (Cloud first, then local fallback)
-   DB=cloud_mongodb_connection_string_here
-   LOCAL_DB=local_mongodb_connection_string_here
+   # Environment Mode (development/production)
+   NODE_ENV=development
    
    # Server Configuration
    PORT=8000
    
-   # JWT Secret
-   JWT_SECRET=your_super_secret_jwt_key_here
+   # MongoDB Connections
+   DEV=mongodb://localhost:27017/business_cards
+   PROD=mongodb+srv://username:password@cluster.mongodb.net/business_cards
+   
+   # Database Selection (true = local (development), false = cloud (production))
+   USE_LOCAL_DB=true
+   
+   # JWT Secret Key - will be provided with .env file (not shared publicly)
+   JWTKEY=your_super_secret_jwt_key_here
    ```
 
 2. **Start the server:**
-   ```bash
+   ```bash 
    # Development with auto-restart
    npm run dev
    
@@ -74,6 +80,30 @@ A RESTful API for managing business cards and users with authentication, built w
    ```
 
 The server will run on `http://localhost:8000`
+
+### 🌱 Automatic Database Seeding
+
+**✨ Smart Auto-Seeding**: When `NODE_ENV=development`, the server automatically:
+1. Connects to the database
+2. Checks if any users exist
+3. If database is empty → creates test data
+4. If data exists → skips seeding (safe!)
+
+**Test Users Created:**
+- **Regular User**: `avi@gmail.com` / Password: `Password123!`
+- **Business User**: `Margol@business.com` / Password: `Business123!` 
+- **Admin User**: `admin@admin.com` / Password: `Admin123!`
+
+**Sample Cards**: 5 business cards automatically created and assigned to business and admin users.
+
+### 🛠️ Manual Seeding (Optional)
+**If you need to manually seed:**
+```bash
+npm run seed
+```
+**⚠️ Note**: Manual seeding only works if you restore the standalone connection logic in seed.js
+
+**🛡️ Data Protection**: The seed function is smart - it checks if users already exist before creating new data, preventing accidental data loss.
 
 ---
 
@@ -399,12 +429,19 @@ npm run dev
 # Start server in production mode
 npm start
 
-# Start with local database (development)
-npm run dev:local
-
-# Start in production with environment variables
-npm run start:prod
+# Manual seed database (optional - it's auto-seeded in development mode when connection to local DB)
+npm run seed
 ```
+
+### 📋 Script Details:
+- **npm run dev**: Development mode with nodemon auto-restart
+- **npm start**: Production mode 
+- **npm run seed**: Manual seeding (standalone)
+
+### 🔄 Automatic Seeding Behavior:
+- **Development mode**: Auto-seeds empty database on server startup
+- **Production mode**: No automatic seeding (safe for production)
+- **Smart detection**: Only creates test data if database is completely empty
 
 ---
 
@@ -423,26 +460,16 @@ npm run start:prod
 ├── public/
 │   ├── index.html       # 404 error page
 │   └── index.css        # Styles for error page
+├── seed.js              # Database seeding function (auto-runs in development)
 ├── server.js            # Main application file
 ├── package.json         # Dependencies and scripts
-└── .env                 # Environment variables
+├── .env                 # Environment variables
+└── README.md           # Project documentation
 ```
 
 ---
 
-## 🚨 Important Notes
-
-1. **Always use HTTPS in production**
-2. **Keep your JWT_SECRET secure and complex**
-3. **Validate all user inputs**
-4. **Use strong passwords (as per the regex pattern)**
-5. **The server logs errors with colored output for debugging**
-6. **Database connects to cloud first, then falls back to local**
-7. **All business card operations require authentication except viewing public cards**
-
----
-
-## 👨‍💻 Author
+## ‍💻 Author
 
 **Alexander Yarovinsky**
 - GitHub: [@AlexanderY88](https://github.com/AlexanderY88)

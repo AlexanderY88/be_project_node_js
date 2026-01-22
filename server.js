@@ -9,6 +9,9 @@ const chalk = require("chalk"); // For colored console output
 const users = require("./routes/users");
 const cards = require("./routes/cards");
 
+// Import seed function
+const seedDatabase = require("./seed");
+
 // Create Express app
 const app = express();
 const port = process.env.PORT || 8000;
@@ -70,17 +73,30 @@ app.use((req, res) => {
     });
 });
 
-// Database connection
-const mongoUri = process.env.LOCAL_DB || process.env.DB;
+// Database connection configuration
+// USE_LOCAL_DB='true' = local database, USE_LOCAL_DB='false' = cloud database
+const useLocalDB = process.env.USE_LOCAL_DB === 'true';
+const mongoUri = useLocalDB ? process.env.DEV : process.env.PROD;
 
 // Connect to MongoDB
 mongoose.connect(mongoUri)
-  .then(() => {
+  .then(async () => {
+    // Success message
     console.log(chalk.green("Connected to MongoDB successfully!"));
-    console.log(chalk.cyan(`Database: ${mongoUri.includes('localhost') ? 'Local MongoDB' : 'MongoDB Atlas'}`));
+    console.log(chalk.cyan(`Using: ${useLocalDB ? 'Development Database' : 'Production Database'}`));
+    
+    // Auto-seed in development only
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    if (isDevelopment) {
+      console.log(chalk.blue("Development mode - checking for test data..."));
+      
+      const seedResult = await seedDatabase();
+      const message = seedResult.skipped ? "Test data already exists" : "Test data created successfully";
+      console.log(chalk.cyan(message));
+    }
   })
   .catch(err => {
-    console.error(chalk.red("MongoDB connection error:"), err);
+    console.error(chalk.red("Database connection failed:"), err);
   });
 
 // Start the server
