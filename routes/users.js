@@ -84,7 +84,7 @@ router.post("/login", async (req,res) => {
 }
 });
 
-// get current user details route
+// get current user details route, the id send from JWT token via body of request
 router.get("/", auth, async (req,res) => {
     try {
         const user = await User.findById(req.user._id);
@@ -139,16 +139,6 @@ router.get("/all", auth, async (req,res) => {
     }
 });
 
-// get current user details
-router.get("/currentUser", auth, async (req,res) => {
-    try {
-        const user = await User.findById(req.user._id);
-        if (!user) return res.status(404).send("User not found");
-        res.status(200).json(_.omit(user.toObject(), ['password', '__v']));
-    } catch (err) {
-        res.status(500).send("Internal server error")
-    }
-});
 
 // delete user route
 router.delete("/:id", auth, async (req,res) => {
