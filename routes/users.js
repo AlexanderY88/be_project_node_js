@@ -124,6 +124,34 @@ router.put("/update/:id", auth, async (req,res) => {
     }
 });
 
+// update user route
+// I will use joi validation of register user process, to not duplicate the code
+router.put("/update/", auth, async (req,res) => {
+    try {
+        const targetUserId = req.user._id.toString();
+        const isOwnProfile = true; // Always true because the api takes the id from the session - for regular users only, for crm and admin - there is another function with id param
+        const isAdmin = req.user.isAdmin;
+        // 1. checks if the current user updating his own profile or admin - because at client side of the project admin able to update any user, so I added functionality also to the server side
+        if (!isOwnProfile && !isAdmin) {
+            return res.status(403).send("Access denied: You can only update your own profile or must be admin");
+        }
+        // 2. joi validation
+        const {error} = checkRegisterBody.validate(req.body);
+        if (error) return res.status(400).send(error.details[0].message);
+        // 3. check if target user exists
+        let targetUser = await User.findById(targetUserId);
+        if (!targetUser) return res.status(404).send("User not found");
+        // 4. update user details
+        await User.updateOne({_id: targetUserId}, req.body);
+        // 5. get updated user and return it
+        const updatedUser = await User.findById(targetUserId);
+        res.status(200).json(_.omit(updatedUser.toObject(), ['password', '__v', '_id'])); // not returns users password, version of update and id - for security reasons
+    } catch (err) {
+        res.status(500).send("Internal server error")
+    }
+});
+
+
 // get all users route
 router.get("/all", auth, async (req,res) => {
     try {
